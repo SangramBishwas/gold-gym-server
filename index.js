@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const port = process.env.PORT || 5000;
 
@@ -33,6 +33,8 @@ dbConnect()
 const classCollection = client.db("goldGymDB").collection("classes");
 const reviewsCollection = client.db("goldGymDB").collection("reviews");
 const postsCollection = client.db("goldGymDB").collection("posts");
+const trainersCollection = client.db("goldGymDB").collection("trainers");
+const usersCollection = client.db("goldGymDB").collection("users");
 
 app.get('/', (req, res) => {
     res.send('Hello GoldGYM!')
@@ -54,6 +56,39 @@ app.get('/getPost', async (req, res) => {
     const result = (await postsCollection.find().toArray()).reverse();
     res.send(result.slice(0, 6))
 })
+
+//users 
+app.post('/users', async (req, res) => {
+    const user = req.body;
+    const query = { email: user.email };
+    const existUser = await usersCollection.findOne(query);
+    if (existUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+    }
+    const result = await usersCollection.insertOne(user);
+    res.send(result);
+})
+
+
+//trainers
+app.get('/trainers', async (req, res) => {
+    const result = await trainersCollection.find().toArray();
+    res.send(result);
+})
+
+app.get('/trainers/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await trainersCollection.findOne(query);
+    res.send(result);
+})
+
+// app.get('/trainer/:id', async(req, res) => {
+//     const id = req.params.id;
+//     const query = {_id: new ObjectId(id)};
+//     const result = await trainersCollection.findOne(query);
+//     res.send(result);
+// })
 
 app.listen(port, () => {
     console.log(`GoldGYM is running on port ${port}`)
