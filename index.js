@@ -3,7 +3,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 
@@ -35,6 +35,7 @@ const reviewsCollection = client.db("goldGymDB").collection("reviews");
 const postsCollection = client.db("goldGymDB").collection("posts");
 const trainersCollection = client.db("goldGymDB").collection("trainers");
 const usersCollection = client.db("goldGymDB").collection("users");
+const paymentsCollection = client.db("goldGymDB").collection("payments");
 
 app.get('/', (req, res) => {
     res.send('Hello GoldGYM!')
@@ -69,6 +70,17 @@ app.post('/users', async (req, res) => {
     res.send(result);
 })
 
+app.patch('/users/:email', async(req, res)=> {
+    const email = req.params.email;
+    const filter = {email: email};
+    const updateDoc = {
+        $set: {
+            role: 'member'
+        }
+    }
+    const result = await usersCollection.updateOne(filter, updateDoc);
+    res.send(result)
+})
 
 //trainers
 app.get('/trainers', async (req, res) => {
@@ -81,6 +93,31 @@ app.get('/trainers/:id', async (req, res) => {
     const query = { _id: new ObjectId(id) };
     const result = await trainersCollection.findOne(query);
     res.send(result);
+})
+
+//payments
+app.post('/payments', async (req, res) => {
+    const payment = req.body;
+    const paymentResult = await paymentsCollection.insertOne(payment);
+    res.send(paymentResult);
+})
+
+//Payment-intent
+app.post('/create-payment-intent', async (req, res) => {
+    const { price } = req.body;
+    const amount = price * 100;
+    console.log('price inside the intend', amount)
+    const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+    });
+
+
+    res.send({
+        clientSecret: paymentIntent.client_secret,
+    });
+
 })
 
 // app.get('/trainer/:id', async(req, res) => {
