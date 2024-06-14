@@ -34,6 +34,7 @@ const classCollection = client.db("goldGymDB").collection("classes");
 const reviewsCollection = client.db("goldGymDB").collection("reviews");
 const postsCollection = client.db("goldGymDB").collection("posts");
 const trainersCollection = client.db("goldGymDB").collection("trainers");
+const requestsCollection = client.db("goldGymDB").collection("requests");
 const usersCollection = client.db("goldGymDB").collection("users");
 const paymentsCollection = client.db("goldGymDB").collection("payments");
 
@@ -95,6 +96,11 @@ app.get('/trainers/:id', async (req, res) => {
     res.send(result);
 })
 
+app.post('/requests', async(req, res) => {
+    const request = req.body;
+    const result = await requestsCollection.insertOne(request);
+    res.send(result);
+})
 //payments
 app.post('/payments', async (req, res) => {
     const payment = req.body;
@@ -112,7 +118,6 @@ app.post('/create-payment-intent', async (req, res) => {
         currency: 'usd',
         payment_method_types: ['card']
     });
-
 
     res.send({
         clientSecret: paymentIntent.client_secret,
