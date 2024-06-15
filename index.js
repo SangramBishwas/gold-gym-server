@@ -31,12 +31,13 @@ async function dbConnect() {
 }
 dbConnect()
 const classCollection = client.db("goldGymDB").collection("classes");
-const reviewsCollection = client.db("goldGymDB").collection("reviews");
 const postsCollection = client.db("goldGymDB").collection("posts");
-const trainersCollection = client.db("goldGymDB").collection("trainers");
-const requestsCollection = client.db("goldGymDB").collection("requests");
-const usersCollection = client.db("goldGymDB").collection("users");
 const paymentsCollection = client.db("goldGymDB").collection("payments");
+const requestsCollection = client.db("goldGymDB").collection("requests");
+const reviewsCollection = client.db("goldGymDB").collection("reviews");
+const trainersCollection = client.db("goldGymDB").collection("trainers");
+const subscribersCollection = client.db("goldGymDB").collection("subscribers");
+const usersCollection = client.db("goldGymDB").collection("users");
 
 app.get('/', (req, res) => {
     res.send('Hello GoldGYM!')
@@ -100,6 +101,13 @@ app.post('/requests', async(req, res) => {
     const request = req.body;
     const result = await requestsCollection.insertOne(request);
     res.send(result);
+})
+
+//Subscrobers
+app.post('/subscribers', async(req, res) => {
+    const subscriber = req.body;
+    const result = await subscribersCollection.insertOne(subscriber);
+    res.send(result)
 })
 //payments
 app.post('/payments', async (req, res) => {
