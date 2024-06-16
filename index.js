@@ -147,9 +147,15 @@ app.post('/request-confirm/:email', async (req, res) => {
     }
 })
 
+app.delete('/request/:id', async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const result = await requestsCollection.deleteOne(filter);
+    res.send(result)
+})
 app.delete('/request/:email', async (req, res) => {
     const email = req.params.email;
-    const filter = {email: email};
+    const filter = { email: email };
     const result = await requestsCollection.deleteOne(filter);
     res.send(result)
 })
