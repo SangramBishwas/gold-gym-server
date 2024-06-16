@@ -72,9 +72,9 @@ app.post('/users', async (req, res) => {
     res.send(result);
 })
 
-app.patch('/users/:email', async(req, res)=> {
+app.patch('/users/:email', async (req, res) => {
     const email = req.params.email;
-    const filter = {email: email};
+    const filter = { email: email };
     const updateDoc = {
         $set: {
             role: 'member'
@@ -84,6 +84,17 @@ app.patch('/users/:email', async(req, res)=> {
     res.send(result)
 })
 
+app.patch('/users&trainer/:email', async (req, res) => {
+    const email = req.params.email;
+    const filter = { email: email };
+    const updateDoc = {
+        $set: {
+            role: 'trainer'
+        }
+    }
+    const result = await usersCollection.updateOne(filter, updateDoc);
+    res.send(result)
+})
 //trainers
 app.get('/trainers', async (req, res) => {
     const result = await trainersCollection.find().toArray();
@@ -96,18 +107,62 @@ app.get('/trainers/:id', async (req, res) => {
     const result = await trainersCollection.findOne(query);
     res.send(result);
 })
-
-app.post('/requests', async(req, res) => {
+app.delete('/trainers/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await trainersCollection.deleteOne(query);
+    res.send(result);
+})
+//requests
+app.post('/requests', async (req, res) => {
     const request = req.body;
     const result = await requestsCollection.insertOne(request);
     res.send(result);
 })
 
+app.get('/requests', async (req, res) => {
+    const result = await requestsCollection.find().toArray();
+    res.send(result)
+})
+
+app.post('/request-confirm/:email', async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email }
+    const request = await requestsCollection.findOne(query);
+    if (request) {
+        const result = await trainersCollection.insertOne({
+            name: request.name,
+            email: request.email,
+            image: request.image,
+            age: request.age,
+            skills: request.skills,
+            available_days: request.available_days,
+            available_times: request.available_times,
+            description: request.description
+        })
+        res.send(result)
+    }
+    else {
+        res.status(404).send({ message: 'Request not found' });
+    }
+})
+
+app.delete('/request/:email', async (req, res) => {
+    const email = req.params.email;
+    const filter = {email: email};
+    const result = await requestsCollection.deleteOne(filter);
+    res.send(result)
+})
+
 //Subscrobers
-app.post('/subscribers', async(req, res) => {
+app.post('/subscribers', async (req, res) => {
     const subscriber = req.body;
     const result = await subscribersCollection.insertOne(subscriber);
     res.send(result)
+})
+app.get('/subscribers', async (req, res) => {
+    const result = await subscribersCollection.find().toArray();
+    res.send(result);
 })
 //payments
 app.post('/payments', async (req, res) => {
