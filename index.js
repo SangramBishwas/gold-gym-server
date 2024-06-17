@@ -113,6 +113,13 @@ app.delete('/trainers/:id', async (req, res) => {
     const result = await trainersCollection.deleteOne(query);
     res.send(result);
 })
+
+//classes
+app.post('/classes', async(req, res) => {
+    const classe = req.body;
+    const result = await classCollection.insertOne(classe);
+    res.send(result)
+})
 //requests
 app.post('/requests', async (req, res) => {
     const request = req.body;
@@ -175,6 +182,10 @@ app.post('/payments', async (req, res) => {
     const payment = req.body;
     const paymentResult = await paymentsCollection.insertOne(payment);
     res.send(paymentResult);
+})
+app.get('/payments', async (req, res) => {
+    const result = await paymentsCollection.find().toArray();
+    res.send(result.reverse().slice(0, 6))
 })
 
 //Payment-intent
