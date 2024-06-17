@@ -2,7 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { access } = require('fs');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
@@ -20,6 +22,8 @@ const client = new MongoClient(uri, {
         deprecationErrors: true,
     }
 });
+
+
 
 async function dbConnect() {
     try {
@@ -43,10 +47,31 @@ app.get('/', (req, res) => {
     res.send('Hello GoldGYM!')
 })
 
-app.get('/featured&classes', async (req, res) => {
-    const result = await classCollection.find().sort({ number_of_bookings: -1 }).toArray();
-    res.send(result.slice(0, 6))
+//jwt
+app.post('/jwt', async (req, res) => {
+    const user = req.body;
+    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '1d'
+    });
+    res.send({ token })
 })
+
+//Middleware
+const verifyToken = (req, res, next) => {
+    if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next()
+    })
+}
+
+
 
 //Review
 app.get('/reviews', async (req, res) => {
@@ -95,6 +120,21 @@ app.patch('/users&trainer/:email', async (req, res) => {
     const result = await usersCollection.updateOne(filter, updateDoc);
     res.send(result)
 })
+
+app.get('/users/admin/:email', verifyToken, async (req, res) => {
+    const email = req.params.email;
+    if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+    }
+    const query = { email: email };
+    const user = await usersCollection.findOne(query);
+    let admin = false;
+    if (user) {
+        admin = user.role === 'admin';
+    }
+    res.send({ admin })
+})
+
 //trainers
 app.get('/trainers', async (req, res) => {
     const result = await trainersCollection.find().toArray();
@@ -115,10 +155,15 @@ app.delete('/trainers/:id', async (req, res) => {
 })
 
 //classes
-app.post('/classes', async(req, res) => {
+app.post('/classes', async (req, res) => {
     const classe = req.body;
     const result = await classCollection.insertOne(classe);
     res.send(result)
+})
+
+app.get('/featured&classes', async (req, res) => {
+    const result = await classCollection.find().sort({ number_of_bookings: -1 }).toArray();
+    res.send(result.slice(0, 6))
 })
 //requests
 app.post('/requests', async (req, res) => {
@@ -127,7 +172,7 @@ app.post('/requests', async (req, res) => {
     res.send(result);
 })
 
-app.get('/requests', async (req, res) => {
+app.get('/requests', verifyToken, async (req, res) => {
     const result = await requestsCollection.find().toArray();
     res.send(result)
 })
