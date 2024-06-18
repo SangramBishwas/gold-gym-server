@@ -70,8 +70,16 @@ const verifyToken = (req, res, next) => {
         next()
     })
 }
-
-
+const verifyAdmin = async (req, res, next) => {
+    const email = req.decoded.email;
+    const query = { email: email };
+    const user = await usersCollection.findOne(query);
+    const isAdmin = user?.role === 'admin';
+    if(!isAdmin){
+      return res.status(403).send({message: 'forbidden access'})
+    }
+    next();
+}
 
 //Review
 app.get('/reviews', async (req, res) => {
@@ -109,7 +117,7 @@ app.patch('/users/:email', async (req, res) => {
     res.send(result)
 })
 
-app.patch('/users&trainer/:email', async (req, res) => {
+app.patch('/users&trainer/:email', verifyToken, verifyAdmin, async (req, res) => {
     const email = req.params.email;
     const filter = { email: email };
     const updateDoc = {
@@ -134,6 +142,19 @@ app.get('/users/admin/:email', verifyToken, async (req, res) => {
     }
     res.send({ admin })
 })
+app.get('/users/trainer/:email', verifyToken, async (req, res) => {
+    const email = req.params.email;
+    if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+    }
+    const query = { email: email };
+    const user = await usersCollection.findOne(query);
+    let admin = false;
+    if (user) {
+        admin = user.role === 'trainer';
+    }
+    res.send({ admin })
+})
 
 //trainers
 app.get('/trainers', async (req, res) => {
@@ -147,37 +168,51 @@ app.get('/trainers/:id', async (req, res) => {
     const result = await trainersCollection.findOne(query);
     res.send(result);
 })
-app.delete('/trainers/:id', async (req, res) => {
+app.delete('/trainers/:id', verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
     const result = await trainersCollection.deleteOne(query);
     res.send(result);
 })
 
+app.put('/trainers/:email', verifyToken, async (req, res) => {
+    const email = req.params.email;
+    const filter = { email: email };
+    const updateSlots = req.body;
+    const updateDoc = {
+        $set: {
+            available_days: updateSlots.available_days,
+            available_times: updateSlots.available_times
+        }
+    }
+    const result = await trainersCollection.updateOne(filter, updateDoc);
+    res.send(result)
+})
+
 //classes
-app.post('/classes', async (req, res) => {
+app.post('/classes', verifyToken, verifyAdmin, async (req, res) => {
     const classe = req.body;
     const result = await classCollection.insertOne(classe);
     res.send(result)
 })
 
-app.get('/featured&classes', async (req, res) => {
+app.get('/featured&classes', verifyToken, async (req, res) => {
     const result = await classCollection.find().sort({ number_of_bookings: -1 }).toArray();
     res.send(result.slice(0, 6))
 })
 //requests
-app.post('/requests', async (req, res) => {
+app.post('/requests', verifyToken, async (req, res) => {
     const request = req.body;
     const result = await requestsCollection.insertOne(request);
     res.send(result);
 })
 
-app.get('/requests', verifyToken, async (req, res) => {
+app.get('/requests', verifyToken, verifyAdmin, async (req, res) => {
     const result = await requestsCollection.find().toArray();
     res.send(result)
 })
 
-app.post('/request-confirm/:email', async (req, res) => {
+app.post('/request-confirm/:email', verifyToken, verifyAdmin, async (req, res) => {
     const email = req.params.email;
     const query = { email: email }
     const request = await requestsCollection.findOne(query);
@@ -199,13 +234,13 @@ app.post('/request-confirm/:email', async (req, res) => {
     }
 })
 
-app.delete('/request/:id', async (req, res) => {
+app.delete('/request/:id', verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
     const result = await requestsCollection.deleteOne(filter);
     res.send(result)
 })
-app.delete('/request/:email', async (req, res) => {
+app.delete('/request/:email', verifyToken, verifyAdmin, async (req, res) => {
     const email = req.params.email;
     const filter = { email: email };
     const result = await requestsCollection.deleteOne(filter);
@@ -218,23 +253,23 @@ app.post('/subscribers', async (req, res) => {
     const result = await subscribersCollection.insertOne(subscriber);
     res.send(result)
 })
-app.get('/subscribers', async (req, res) => {
+app.get('/subscribers', verifyToken, verifyAdmin, async (req, res) => {
     const result = await subscribersCollection.find().toArray();
     res.send(result);
 })
 //payments
-app.post('/payments', async (req, res) => {
+app.post('/payments', verifyToken, async (req, res) => {
     const payment = req.body;
     const paymentResult = await paymentsCollection.insertOne(payment);
     res.send(paymentResult);
 })
-app.get('/payments', async (req, res) => {
+app.get('/payments', verifyToken, verifyAdmin, async (req, res) => {
     const result = await paymentsCollection.find().toArray();
     res.send(result.reverse().slice(0, 6))
 })
 
 //Payment-intent
-app.post('/create-payment-intent', async (req, res) => {
+app.post('/create-payment-intent', verifyToken, async (req, res) => {
     const { price } = req.body;
     const amount = price * 100;
     console.log('price inside the intend', amount)
