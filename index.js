@@ -75,8 +75,8 @@ const verifyAdmin = async (req, res, next) => {
     const query = { email: email };
     const user = await usersCollection.findOne(query);
     const isAdmin = user?.role === 'admin';
-    if(!isAdmin){
-      return res.status(403).send({message: 'forbidden access'})
+    if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' })
     }
     next();
 }
@@ -128,6 +128,17 @@ app.patch('/users&trainer/:email', verifyToken, verifyAdmin, async (req, res) =>
     const result = await usersCollection.updateOne(filter, updateDoc);
     res.send(result)
 })
+app.patch('/users&member/:email', verifyToken, verifyAdmin, async (req, res) => {
+    const email = req.params.email;
+    const filter = { email: email };
+    const updateDoc = {
+        $set: {
+            role: 'member'
+        }
+    }
+    const result = await usersCollection.updateOne(filter, updateDoc);
+    res.send(result)
+})
 
 app.get('/users/admin/:email', verifyToken, async (req, res) => {
     const email = req.params.email;
@@ -142,6 +153,8 @@ app.get('/users/admin/:email', verifyToken, async (req, res) => {
     }
     res.send({ admin })
 })
+
+//trainers
 app.get('/users/trainer/:email', verifyToken, async (req, res) => {
     const email = req.params.email;
     if (email !== req.decoded.email) {
@@ -149,14 +162,13 @@ app.get('/users/trainer/:email', verifyToken, async (req, res) => {
     }
     const query = { email: email };
     const user = await usersCollection.findOne(query);
-    let admin = false;
+    let trainer = false;
     if (user) {
-        admin = user.role === 'trainer';
+        trainer = user.role === 'trainer';
     }
-    res.send({ admin })
+    res.send({ trainer })
 })
 
-//trainers
 app.get('/trainers', async (req, res) => {
     const result = await trainersCollection.find().toArray();
     res.send(result);
@@ -182,10 +194,33 @@ app.put('/trainers/:email', verifyToken, async (req, res) => {
     const updateDoc = {
         $set: {
             available_days: updateSlots.available_days,
-            available_times: updateSlots.available_times
+            available_times: updateSlots.available_times,
+            classes: updateSlots.classes
         }
     }
-    const result = await trainersCollection.updateOne(filter, updateDoc);
+    const options = { upsert: true };
+    const result = await trainersCollection.updateOne(filter, updateDoc, options);
+    res.send(result)
+})
+
+app.get('/trainer/:email', async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email };
+    const result = await trainersCollection.findOne(query);
+    res.send(result);
+})
+
+app.patch('/trainer&slot/:id', async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const timeValue = req.body;
+    console.log(timeValue);
+    const deleteDoc = {
+        $pull: {
+            available_times: timeValue.slot
+        }
+    }
+    const result = await trainersCollection.updateOne(filter, deleteDoc);
     res.send(result)
 })
 
@@ -196,9 +231,13 @@ app.post('/classes', verifyToken, verifyAdmin, async (req, res) => {
     res.send(result)
 })
 
-app.get('/featured&classes', verifyToken, async (req, res) => {
+app.get('/featured&classes', async (req, res) => {
     const result = await classCollection.find().sort({ number_of_bookings: -1 }).toArray();
     res.send(result.slice(0, 6))
+})
+app.get('/classes', async (req, res) => {
+    const result = await classCollection.find().toArray();
+    res.send(result);
 })
 //requests
 app.post('/requests', verifyToken, async (req, res) => {
