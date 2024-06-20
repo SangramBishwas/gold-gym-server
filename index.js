@@ -35,6 +35,7 @@ async function dbConnect() {
 }
 dbConnect()
 const classCollection = client.db("goldGymDB").collection("classes");
+const feedbackCollection = client.db("goldGymDB").collection("feedbacks");
 const postsCollection = client.db("goldGymDB").collection("posts");
 const paymentsCollection = client.db("goldGymDB").collection("payments");
 const requestsCollection = client.db("goldGymDB").collection("requests");
@@ -167,6 +168,20 @@ app.get('/users/:email', async (req, res) => {
     res.send(result)
 })
 
+//feedbacks
+app.post('/feedback', verifyToken, verifyAdmin, async (req, res) => {
+    const feedback = req.body;
+    const result = await feedbackCollection.insertOne(feedback);
+    res.send(result)
+})
+
+app.get('/feedback/:email', verifyToken, async(req, res) => {
+    const email = req.params.email;
+    const query = {email: email};
+    const result = await feedbackCollection.findOne(query);
+    res.send(result)
+})
+
 //trainers
 app.get('/users/trainer/:email', verifyToken, async (req, res) => {
     const email = req.params.email;
@@ -261,6 +276,13 @@ app.post('/requests', verifyToken, async (req, res) => {
 
 app.get('/requests', verifyToken, verifyAdmin, async (req, res) => {
     const result = await requestsCollection.find().toArray();
+    res.send(result)
+})
+
+app.get('/requests/:email', verifyToken, async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email };
+    const result = await requestsCollection.findOne(query);
     res.send(result)
 })
 
