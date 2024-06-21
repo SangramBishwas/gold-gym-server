@@ -94,6 +94,11 @@ app.get('/getPost', async (req, res) => {
     res.send(result.slice(0, 6))
 })
 
+app.get('/posts', async (req, res) => {
+    const result = await postsCollection.find().toArray();
+    res.send(result)
+})
+
 app.post('/getPost', async (req, res) => {
     const post = req.body;
     const result = await postsCollection.insertOne(post);
@@ -175,10 +180,16 @@ app.post('/feedback', verifyToken, verifyAdmin, async (req, res) => {
     res.send(result)
 })
 
-app.get('/feedback/:email', verifyToken, async(req, res) => {
+app.get('/feedback/:email', verifyToken, async (req, res) => {
     const email = req.params.email;
-    const query = {email: email};
+    const query = { email: email };
     const result = await feedbackCollection.findOne(query);
+    res.send(result)
+})
+app.delete('/feedback/:email', verifyToken, async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email };
+    const result = await feedbackCollection.deleteOne(query);
     res.send(result)
 })
 
@@ -265,6 +276,15 @@ app.get('/featured&classes', async (req, res) => {
 })
 app.get('/classes', async (req, res) => {
     const result = await classCollection.find().toArray();
+    res.send(result);
+})
+app.get('/classes-search', async (req, res) => {
+    const filter = req.query;
+    const query = {
+        class_name: { $regex: filter.search, $options: 'i' }
+    }
+
+    const result = await classCollection.find(query).toArray();
     res.send(result);
 })
 //requests
