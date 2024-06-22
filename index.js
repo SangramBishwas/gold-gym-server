@@ -10,6 +10,14 @@ const port = process.env.PORT || 5000;
 
 
 //Middleware
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'https://gold-gym-3132d.web.app',
+        'https://gold-gym-3132d.firebaseapp.com'
+    ],
+    credentials: true,
+}));
 app.use(cors());
 app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.3mmbmgw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -85,6 +93,12 @@ const verifyAdmin = async (req, res, next) => {
 //Review
 app.get('/reviews', async (req, res) => {
     const result = await reviewsCollection.find().toArray();
+    res.send(result);
+})
+
+app.post('/reviews', verifyToken, async (req, res) => {
+    const feedback = req.body;
+    const result = await reviewsCollection.insertOne(feedback);
     res.send(result);
 })
 
@@ -362,6 +376,12 @@ app.get('/payments', verifyToken, verifyAdmin, async (req, res) => {
     res.send(result.reverse().slice(0, 6))
 })
 
+app.get('/payments/:email', verifyToken, async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email };
+    const result = await paymentsCollection.findOne(query);
+    res.send(result);
+})
 //Payment-intent
 app.post('/create-payment-intent', verifyToken, async (req, res) => {
     const { price } = req.body;
